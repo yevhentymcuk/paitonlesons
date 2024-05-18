@@ -9,15 +9,79 @@ IMAGES_PATH_BG = 'images/background/'
 IMAGES_PATH_MENU = 'images/menu/'
 FONT_PATH = 'fonts/'
 FPS: int = 60
-
+IMAGES_PATH = 'images/'
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
 
+class Bullet:
+    bullet = None
+
+    def __init__(self, x: int, y: int):
+        self.bullet = pygame.Surface((3, 5))
+        self.bullet.fill((0, 0, 50))
+        self.x = x
+        self.y = y
+        self.speed = 2
+
+    def move(self):
+        self.y -= self.speed
+
+    def draw(self):
+        screen.blit(self.bullet, (self.x, self.y))
+class Bullets:
+    bullet_list: list = []
+
+    def add(self, x: int, y: int):
+        self.bullet_list.append(Bullet(x, y))
+
+    def move(self):
+        for b in self.bullet_list:
+            b.move()
+            if b.y < 0:
+                self.bullet_list.remove(b)
+            b.draw()
 
 class Player:
-    pass
+    moving: list = []
+    dt = 1
+    bullets = None
 
+    def __init__(self):
+        n = random.randint(1, 8)
+        self.image = pygame.image.load(IMAGES_PATH + f'Ship{n}.png')
+        self.x = int(SCREEN_WIDTH / 2)
+        self.y = SCREEN_HEIGHT - (self.image.get_height() + 10)
+        self.speed = 5
+
+        self.bullets = Bullets()
+
+    def draw(self):
+        screen.blit(self.image, (self.x, self.y))
+
+    def move(self):
+        if len(self.moving) > 0:
+            if self.moving[0] == pygame.K_LEFT:
+                self.move_left()
+            elif self.moving[0] == pygame.K_RIGHT:
+                self.move_right()
+
+        self.bullets.move()
+
+    def move_left(self):
+        if self.x > 0:
+            self.x -= self.speed
+        else:
+            self.x = 0
+
+    def move_right(self):
+        if self.x < SCREEN_WIDTH - self.image.get_width():
+            self.x += self.speed
+        else:
+            self.x = SCREEN_WIDTH - self.image.get_width()
+
+    def shoot(self):
+        self.bullets.add(self.x, self.y)
 
 class Background:
      image = None
@@ -88,10 +152,29 @@ class Menu:
     def click_mouse(self):
         btn = pygame.mouse.get_pressed()  # (False, False, False)
 
-        if btn[0] and self.mouse_up():
+        if btn[0] and self.start_pos():
             return 'run'
 
         return None
+
+class Enemy:
+    x: int = 0
+    y: int = 0
+    speed: int = 0
+    image = None
+
+    def add(self):
+        pass
+
+    def move(self):
+        pass
+
+    def fire(self):
+        pass
+
+
+class Enemies:
+    pass
 class Game:
     game_run: bool = False
 
@@ -116,26 +199,43 @@ class Game:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_s:
                         self.run()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if self.menu.click_mouse() == 'run':
+                        self.run()
 
             self.menu.draw()
             pygame.display.update()
 
     def run(self):
         self.game_run = True
+
         while self.game_run:
+            self.delta_time()
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_q:
-                        self.run = False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if self.menu.click_mouse() == 'run':
-                        self.run
+                    if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                        if event.key not in self.player.moving:
+                            self.player.moving.append(event.key)
+                            print(self.player.moving)
+                    elif event.key == pygame.K_SPACE:
+                        self.player.shoot()
+                    elif event.key == pygame.K_q:
+                        self.game_run = False
+                        break
+                elif event.type == pygame.KEYUP:
+                    if event.key in self.player.moving:
+                        self.player.moving.remove(event.key)
+            # ---
+            if self.game_run:
+                self.bg.draw()
+                self.player.move()
+                self.player.draw()
 
-            self.bg.draw()
-            pygame.display.update()
+                pygame.display.update()
 
 
 if __name__ == '__main__':
